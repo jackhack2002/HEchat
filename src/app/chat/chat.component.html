@@ -1,0 +1,16 @@
+<!-- chat-room.component.html -->
+<div *ngIf="messages$ | async as messages">
+     <div *ngFor="let message of messages" class="message">
+       <div [ngClass]="{'own-message': message.senderId === currentUserUid}">
+         <p>{{ message.text }}</p>
+         <small>{{ message.timestamp | date:'shortTime' }}</small>
+       </div>
+     </div>
+   </div>
+   
+   <!-- Message input field -->
+   <div class="message-input">
+     <input [(ngModel)]="newMessage" placeholder="Type your message..." />
+     <button (click)="sendMessage()">Send</button>
+   </div>
+   
