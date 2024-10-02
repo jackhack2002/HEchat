@@ -16,7 +16,7 @@ export class ChatComponent implements AfterViewChecked {
   chatId!: string;
   messages$!: Observable<any[]>;
   newMessage: string = '';
-  currentUserUid!: any;
+  currentUserUid!: string | null;
   @ViewChild('chatContainer') chatContainer!: ElementRef;
 
   constructor(
@@ -25,12 +25,21 @@ export class ChatComponent implements AfterViewChecked {
   ) {}
 
   ngOnInit(): void {
-    // Get the chatId from the route parameters
-    this.chatId = this.route.snapshot.paramMap.get('chatId') as string;
+    // Fetch the recipient's UID from route parameters
+    const recipientId = this.route.snapshot.paramMap.get('recipientId') as string;
+
+    // Get current user UID
     this.currentUserUid = this.chatService.getCurrentUserUid();
 
-    // Fetch the messages for this chat
-    this.messages$ = this.chatService.getMessages(this.chatId);
+    if (this.currentUserUid && recipientId) {
+      // Generate a unique chatId based on the two users' UIDs
+      this.chatId = this.chatService.generateChatId(this.currentUserUid, recipientId);
+
+      // Fetch the messages for this chat
+      this.messages$ = this.chatService.getMessages(this.chatId);
+    } else {
+      console.error('User or recipient UID is missing');
+    }
   }
 
   ngAfterViewChecked(): void {
@@ -38,16 +47,24 @@ export class ChatComponent implements AfterViewChecked {
   }
 
   sendMessage(): void {
-    if (this.newMessage.trim()) {
+    if (this.currentUserUid && this.newMessage.trim()) {
       const message = {
         senderId: this.currentUserUid,
         text: this.newMessage,
         timestamp: Date.now(),
       };
 
-      this.chatService.sendMessage(this.chatId, message); // Removed the .then() block
-      this.newMessage = ''; // Clear input after sending
-      this.scrollToBottom();
+      // Send the message using the ChatService
+      this.chatService.sendMessage(this.chatId, message)
+        .then(() => {
+          this.newMessage = ''; // Clear input after successful message send
+          this.scrollToBottom(); // Scroll to the bottom of the chat after sending
+        })
+        .catch((error: any) => {
+          console.error('Error sending message:', error);
+        });
+    } else {
+      console.error('Cannot send message: User not logged in or message is empty');
     }
   }
 
@@ -55,7 +72,7 @@ export class ChatComponent implements AfterViewChecked {
   scrollToBottom(): void {
     try {
       this.chatContainer.nativeElement.scrollTop = this.chatContainer.nativeElement.scrollHeight;
-    } catch (err: any) { // Explicitly set error type to 'any'
+    } catch (err: any) {
       console.error('Error while scrolling:', err);
     }
   }

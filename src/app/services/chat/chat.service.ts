@@ -35,11 +35,11 @@ export class ChatService {
     return chatId;
   }
 
-  // Send a message to a specific chat room in the Realtime Database
-  sendMessage(chatId: string, message: { senderId: string; text: string; timestamp: number }) {
+  sendMessage(chatId: string, message: { senderId: string; text: string; timestamp: number }): Promise<void> {
     const newMessageRef = ref(this.db, `chats/${chatId}/messages/${Date.now()}`);
-    set(newMessageRef, message);
+    return set(newMessageRef, message); // This returns a promise
   }
+  
 
   // Fetch messages for a specific chat room from Realtime Database
   getMessages(chatId: string): Observable<any[]> {
@@ -102,4 +102,10 @@ export class ChatService {
     const user: User | null = getAuth().currentUser;
     return user ? user.uid : null;
   }
+
+  generateChatId(user1: string, user2: string): string {
+    // Ensure the chat ID is unique regardless of the user order
+    return [user1, user2].sort().join('_');
+  }
+  
 }
