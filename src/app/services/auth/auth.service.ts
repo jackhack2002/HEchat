@@ -63,9 +63,8 @@ export class AuthService {
       const result = await signInWithPopup(this.auth, provider);
       console.log('User signed in with Google:', result.user);
 
-      // Create a chat for the user signed in with Google
       const chatData = {
-        users: [result.user.uid], // Add the user to the chat
+        users: [result.user.uid], 
         createdAt: Date.now(),
       };
       this.chatService.createChat(result.user.uid, chatData); 

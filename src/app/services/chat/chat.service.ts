@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs } from 'firebase/firestore'; // Firestore
-import { getDatabase, ref, set, get, onValue } from 'firebase/database'; // Realtime Database
+import { getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs } from 'firebase/firestore';
+import { getDatabase, ref, set, onValue } from 'firebase/database';
 import { Observable } from 'rxjs';
 import { User, getAuth } from 'firebase/auth';
 
@@ -8,40 +8,24 @@ import { User, getAuth } from 'firebase/auth';
   providedIn: 'root',
 })
 export class ChatService {
-  private db = getDatabase(); // Realtime Database instance
-  private firestore = getFirestore(); // Firestore instance
+  
+  private db = getDatabase();
+  private firestore = getFirestore();
 
   constructor() {}
 
-  // Function to generate a unique room ID for two users
-  private generateChatRoomId(userId1: string, userId2: string): string {
-    return userId1 < userId2 ? `${userId1}_${userId2}` : `${userId2}_${userId1}`;
+  // Generate a unique chatId based on two user UIDs
+  generateChatId(currentUserUid: string, otherUserId: string): string {
+    return [currentUserUid, otherUserId].sort().join('_');
   }
 
-  // Create or get a chat room between two users
-  async createOrGetChatRoom(userId1: string, userId2: string): Promise<string> {
-    const chatId = this.generateChatRoomId(userId1, userId2);
-    const chatRef = doc(this.firestore, `chats/${chatId}`);
-    
-    const chatDoc = await getDoc(chatRef);
-    if (!chatDoc.exists()) {
-      // Create the chat room metadata in Firestore if it doesn't exist
-      await setDoc(chatRef, {
-        users: [userId1, userId2],
-        createdAt: Date.now(),
-      });
-    }
-
-    return chatId;
-  }
-
-  sendMessage(chatId: string, message: { senderId: string; text: string; timestamp: number }): Promise<void> {
+  sendMessage(chatId: string, message: { senderId: string; text: string; timestamp: number }) {
+    const messagesRef = ref(this.db, `chats/${chatId}/messages`);
     const newMessageRef = ref(this.db, `chats/${chatId}/messages/${Date.now()}`);
-    return set(newMessageRef, message); // This returns a promise
+    set(newMessageRef, message);
   }
-  
 
-  // Fetch messages for a specific chat room from Realtime Database
+  // Fetch messages for a specific chat from Realtime Database
   getMessages(chatId: string): Observable<any[]> {
     const messagesRef = ref(this.db, `chats/${chatId}/messages`);
     return new Observable((observer) => {
@@ -65,17 +49,15 @@ export class ChatService {
   getChatMetadata(chatId: string): Observable<any> {
     const chatRef = doc(this.firestore, `chats/${chatId}`);
     return new Observable((observer) => {
-      getDoc(chatRef)
-        .then((doc) => {
-          if (doc.exists()) {
-            observer.next(doc.data());
-          } else {
-            observer.next(null);
-          }
-        })
-        .catch((error) => {
-          observer.error(error);
-        });
+      getDoc(chatRef).then((doc) => {
+        if (doc.exists()) {
+          observer.next(doc.data());
+        } else {
+          observer.next(null);
+        }
+      }).catch((error) => {
+        observer.error(error);
+      });
     });
   }
 
@@ -83,29 +65,20 @@ export class ChatService {
   getAllChats(): Observable<any[]> {
     const chatsCollection = collection(this.firestore, 'chats');
     return new Observable((observer) => {
-      getDocs(chatsCollection)
-        .then((querySnapshot) => {
-          const chats: any[] = [];
-          querySnapshot.forEach((doc) => {
-            chats.push({ id: doc.id, ...doc.data() });
-          });
-          observer.next(chats);
-        })
-        .catch((error) => {
-          observer.error(error);
+      getDocs(chatsCollection).then((querySnapshot) => {
+        const chats: any[] = [];
+        querySnapshot.forEach((doc) => {
+          chats.push({ id: doc.id, ...doc.data() });
         });
+        observer.next(chats);
+      }).catch((error) => {
+        observer.error(error);
+      });
     });
   }
 
-  // Get the current user's UID
   getCurrentUserUid(): string | null {
     const user: User | null = getAuth().currentUser;
     return user ? user.uid : null;
   }
-
-  generateChatId(user1: string, user2: string): string {
-    // Ensure the chat ID is unique regardless of the user order
-    return [user1, user2].sort().join('_');
-  }
-  
 }

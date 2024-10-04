@@ -7,18 +7,17 @@ import { RegisterComponent } from './register/register.component';
 import { BodyComponent } from './body/body.component';
 
 export const routes: Routes = [
-     { path: 'register', component: RegisterComponent },
+  { path: 'register', component: RegisterComponent },
   { path: 'login', component: LoginComponent },
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   {
     path: '',
-    component: BodyComponent ,
-    children:[
-     {path:'users',component:ChatListComponent},
-     {path:'chat/:id',component:ChatComponent}
+    component: BodyComponent,
+    children: [
+      { path: 'users', component: ChatListComponent },
+      { path: 'chat/:id', component: ChatComponent } // Pass the other user's ID here
     ]
-},
-
+  },
   { path: '**', redirectTo: '/login' },
 ];
- 
+

@@ -16,7 +16,8 @@ export class ChatComponent implements AfterViewChecked {
   chatId!: string;
   messages$!: Observable<any[]>;
   newMessage: string = '';
-  currentUserUid!: string | null;
+  currentUserUid!: any;
+  otherUserId!: string; // Add this to get the other user's ID
   @ViewChild('chatContainer') chatContainer!: ElementRef;
 
   constructor(
@@ -25,20 +26,15 @@ export class ChatComponent implements AfterViewChecked {
   ) {}
 
   ngOnInit(): void {
-    // Fetch the recipient's UID from route parameters
-    const recipientId = this.route.snapshot.paramMap.get('recipientId') as string;
-
-    // Get current user UID
+    this.otherUserId = this.route.snapshot.paramMap.get('id') as string; // Get other user ID from route
     this.currentUserUid = this.chatService.getCurrentUserUid();
 
-    if (this.currentUserUid && recipientId) {
-      // Generate a unique chatId based on the two users' UIDs
-      this.chatId = this.chatService.generateChatId(this.currentUserUid, recipientId);
+    if (this.currentUserUid && this.otherUserId) {
+      // Generate a unique chatId based on both users' UIDs
+      this.chatId = this.chatService.generateChatId(this.currentUserUid, this.otherUserId);
 
       // Fetch the messages for this chat
       this.messages$ = this.chatService.getMessages(this.chatId);
-    } else {
-      console.error('User or recipient UID is missing');
     }
   }
 
@@ -47,24 +43,16 @@ export class ChatComponent implements AfterViewChecked {
   }
 
   sendMessage(): void {
-    if (this.currentUserUid && this.newMessage.trim()) {
+    if (this.newMessage.trim() && this.currentUserUid) {
       const message = {
         senderId: this.currentUserUid,
         text: this.newMessage,
         timestamp: Date.now(),
       };
 
-      // Send the message using the ChatService
-      this.chatService.sendMessage(this.chatId, message)
-        .then(() => {
-          this.newMessage = ''; // Clear input after successful message send
-          this.scrollToBottom(); // Scroll to the bottom of the chat after sending
-        })
-        .catch((error: any) => {
-          console.error('Error sending message:', error);
-        });
-    } else {
-      console.error('Cannot send message: User not logged in or message is empty');
+      this.chatService.sendMessage(this.chatId, message);
+      this.newMessage = ''; // Clear input after sending
+      this.scrollToBottom();
     }
   }
 
